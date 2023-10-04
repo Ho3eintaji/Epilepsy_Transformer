@@ -20,7 +20,7 @@ from einops import rearrange, repeat
 from einops.layers.torch import Rearrange
 from tuh_dataset import TUHDataset, get_data_loader
 from epilepsy_performance_metrics.src.timescoring.annotations import Annotation
-from epilepsy_performance_metrics.src.timescoring.scoring import EventScoring
+from epilepsy_performance_metrics.src.timescoring.scoring import EventScoring, SampleScoring
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 from sklearn.metrics import precision_recall_curve, confusion_matrix
@@ -276,19 +276,25 @@ def test_event_base():
             fn_total += (scores.refTrue - scores.tp)
             total_samples += scores.numSamples
 
+    print("FS", scores.fs)
+    print("Total Samples ", total_samples)
     print("Total true positive events: ", tp_total)
     print("Total false positive events: ", fp_total)
     print("Total false negative events: ", fn_total)
 
-    print("Sensitivity ", 100.0 * tp_total / (tp_total + fn_total))
-    print("Precision ", 100.0 * tp_total / (tp_total + fp_total))
-    fp_rate = fp_total / (total_samples / scores.fs / 3600)  # FP per hour
+    sensitivity = tp_total / (tp_total + fn_total)
+    print("Sensitivity ", 100.0 * sensitivity)
+    precision = tp_total / (tp_total + fp_total)
+    print("Precision ", 100.0 * precision)
+    print("F1 ", 100.0 * 2 * sensitivity * precision / (sensitivity + precision))
+
+    fp_rate = fp_total / (total_samples / scores.fs / 3600 / 24)  # FP per day
     print("False Alarm Rate : ", fp_rate)
 
 
 def test_sample_base():
     save_directory = '/home/amirshah/EPFL/EpilepsyTransformer/TUSZv2/preprocess'
-    train_loader, val_loader, test_loader = get_data_loader(32, save_directory, event_base=False)
+    train_loader, val_loader, test_loader = get_data_loader(256, save_directory, event_base=False)
 
     val_label_all = []
     val_prob_all = np.zeros(0, dtype=np.float)
@@ -315,8 +321,18 @@ def test_sample_base():
             test_prob = torch.squeeze(sigmoid(test_prob))
             test_prob_all = np.concatenate((test_prob_all, test_prob.cpu().numpy()))
 
-    test_predict_all = np.where(test_prob_all > best_th, 1, 0)
-    print("Test confusion matrix: ", confusion_matrix(test_label_all, test_predict_all))
+    test_predict = np.where(test_prob_all > best_th, 1, 0)
+
+    annotation_ref = Annotation(test_label_all, 1 / 12)
+    annotation_hyp = Annotation(test_predict, 1 / 12)
+
+    scores = SampleScoring(ref=annotation_ref, hyp=annotation_hyp, fs=1/12)
+    print("Sensitivity", scores.sensitivity)
+    print("Precision", scores.precision)
+    print("F1", scores.f1)
+    print("FAR", scores.fpRate)
+
+    print("Test confusion matrix: ", confusion_matrix(test_label_all, test_predict))
 
     print("AUROC result: ", roc_auc_score(test_label_all, test_prob_all))
 
@@ -415,15 +431,15 @@ def test_run():
 sample_rate = 256
 eeg_type = 'stft'  # 'original', 'bipolar', 'stft'
 device = 'cuda:0'
-# device = 'cpu'
 
 # model = torch.load('inference_ck_0.9208', map_location=torch.device(device))
-model = torch.load('/home/amirshah/EPFL/EpilepsyTransformer/TUSZv2/preprocess/test_STFT/test_model_22_0.9296276365344943',
+model = torch.load('/home/amirshah/EPFL/EpilepsyTransformer/TUSZv2/preprocess/TUH_model/test_model_22_0.9296276365344943',
                    map_location=torch.device(device))
 print(sum(p.numel() for p in model.parameters() if p.requires_grad))
 model.eval()
 sigmoid = nn.Sigmoid()
 
-test_sample_base()
+# test_sample_base()
+test_event_base()
 # test_recall()
 # test_run()

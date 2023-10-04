@@ -28,7 +28,6 @@ parser.add_argument('--data_type', type=str, default='dev', choices=['train', 'e
 parser.add_argument('--task_type', type=str, default='binary', choices=['binary'])
 parser.add_argument('--slice_length', type=int, default=12)
 parser.add_argument('--eeg_type', type=str, default='stft', choices=['original', 'bipolar', 'stft'])
-parser.add_argument('--selected_channels', type=int, default=-1)
 
 args = parser.parse_args()
 
@@ -130,11 +129,10 @@ def spectrogram_unfold_feature(signals):
 
 
 class TUHDataset(Dataset):
-    def __init__(self, file_list, transform=None, selected_channels=None):
+    def __init__(self, file_list, transform=None):
         self.file_list = file_list
         self.file_length = len(self.file_list)
         self.transform = transform
-        self.selected_channels = selected_channels
 
     def __len__(self):
         return self.file_length
@@ -166,14 +164,8 @@ class TUHDatasetEvent(Dataset):
         for filename in filenames:
             with open(filename, 'rb') as f:
                 data_pkl = pickle.load(f)
-                signals = np.asarray(data_pkl['signals'])
-                if signals.shape != (20, 3072):
-                    print("Error in shape: ", signals.shape)
-
-                if args.eeg_type == 'stft':
-                    f, t, signals = spectrogram_unfold_feature(signals)
-                    # print(signals.shape)
-                    # exit()
+                signals = np.asarray(data_pkl['STFT'])
+                signals = np.reshape(signals, (-1, signals.shape[2]))
 
                 signals = self.transform(signals)
                 recording_signals.append(signals)
@@ -252,13 +244,13 @@ def get_data_loader(batch_size, save_dir=args.save_directory, event_base=False):
         ]
     )
 
-    train_data = TUHDataset(train_data, transform=train_transforms, selected_channels=args.selected_channels)
+    train_data = TUHDataset(train_data, transform=train_transforms)
     if event_base:
         val_data = TUHDatasetEvent(separate_and_sort_filenames(val_data), transform=val_transforms)
         test_data = TUHDatasetEvent(separate_and_sort_filenames(test_data), transform=test_transforms)
     else:
-        val_data = TUHDataset(val_data, transform=val_transforms, selected_channels=args.selected_channels)
-        test_data = TUHDataset(test_data, transform=test_transforms, selected_channels=args.selected_channels)
+        val_data = TUHDataset(val_data, transform=val_transforms)
+        test_data = TUHDataset(test_data, transform=test_transforms)
 
     train_loader = DataLoader(dataset=train_data, batch_size=batch_size, shuffle=True, num_workers=6)
     val_loader = DataLoader(dataset=val_data, batch_size=batch_size, shuffle=False, num_workers=6)

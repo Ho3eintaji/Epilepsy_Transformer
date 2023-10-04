@@ -16,11 +16,6 @@ from vit_pytorch.vit import ViT
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
-print(f"Torch: {torch.__version__}")
-print("Channels selected for this trainin\nGroup number: {}\nChannels: {} ".format(tuh_dataset.args.selected_channels,
-                                                                                   tuh_dataset.channels_groups
-                                                                                   [tuh_dataset.args.selected_channels]))
-
 
 def seed_everything(seed=99):
     random.seed(seed)
@@ -52,11 +47,12 @@ criterion = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=lr)
 # scheduler
 scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
-
-train_loader, val_loader, test_loader = tuh_dataset.get_data_loader(batch_size)
+print('save_directory', tuh_dataset.args.save_directory)
+train_loader, val_loader, test_loader = tuh_dataset.get_data_loader(batch_size,
+                                                                    save_dir=tuh_dataset.args.save_directory)
 
 best_val_auc = 0.0
-model_directory = os.path.join(tuh_dataset.args.save_directory, 'test_STFT')
+model_directory = os.path.join(tuh_dataset.args.save_directory, 'Siena_model17')
 os.mkdir(model_directory)
 for epoch in range(epochs):
 
