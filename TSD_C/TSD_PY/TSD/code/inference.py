@@ -221,8 +221,8 @@ def thresh_max_f1(y_true, y_prob):
     return best_thresh
 
 
-def test_event_base():
-    save_directory = '/home/amirshah/EPFL/EpilepsyTransformer/TUSZv2/preprocess'
+def test_event_base(pat_num):
+    save_directory = '/home/amirshah/EPFL/EpilepsyTransformer/input/Siena_{}'.format(pat_num)
     train_loader, val_loader, test_loader = get_data_loader(1, save_directory, event_base=True)
 
     val_label_all = np.zeros(0, dtype=np.int)
@@ -286,15 +286,16 @@ def test_event_base():
     print("Sensitivity ", 100.0 * sensitivity)
     precision = tp_total / (tp_total + fp_total)
     print("Precision ", 100.0 * precision)
-    print("F1 ", 100.0 * 2 * sensitivity * precision / (sensitivity + precision))
+    if sensitivity + precision != 0:
+        print("F1 ", 100.0 * 2 * sensitivity * precision / (sensitivity + precision))
 
     fp_rate = fp_total / (total_samples / scores.fs / 3600 / 24)  # FP per day
     print("False Alarm Rate : ", fp_rate)
 
 
-def test_sample_base():
-    save_directory = '/home/amirshah/EPFL/EpilepsyTransformer/TUSZv2/preprocess'
-    train_loader, val_loader, test_loader = get_data_loader(256, save_directory, event_base=False)
+def test_sample_base(pat_num):
+    save_directory = '/home/amirshah/EPFL/EpilepsyTransformer/input/Siena_{}'.format(pat_num)
+    train_loader, val_loader, test_loader = get_data_loader(257, save_directory, event_base=False)
 
     val_label_all = []
     val_prob_all = np.zeros(0, dtype=np.float)
@@ -438,8 +439,10 @@ model = torch.load('/home/amirshah/EPFL/EpilepsyTransformer/TUSZv2/preprocess/TU
 print(sum(p.numel() for p in model.parameters() if p.requires_grad))
 model.eval()
 sigmoid = nn.Sigmoid()
-
-# test_sample_base()
-test_event_base()
+# for i in [0, 1, 3, 5, 6, 7, 9, 10, 12, 17]:
+for i in [17]:
+    print("Patient ", i)
+    test_sample_base(pat_num=i)
+    test_event_base(pat_num=i)
 # test_recall()
 # test_run()

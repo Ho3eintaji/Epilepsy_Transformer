@@ -1,0 +1,3 @@
+[submodule "Prototypical-Networks-for-Few-shot-Learning-PyTorch"]
+	path = Prototypical-Networks-for-Few-shot-Learning-PyTorch
+	url = git@github.com:orobix/Prototypical-Networks-for-Few-shot-Learning-PyTorch.git

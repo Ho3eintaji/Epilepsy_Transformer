@@ -28,6 +28,7 @@ parser.add_argument('--data_type', type=str, default='dev', choices=['train', 'e
 parser.add_argument('--task_type', type=str, default='binary', choices=['binary'])
 parser.add_argument('--slice_length', type=int, default=12)
 parser.add_argument('--eeg_type', type=str, default='stft', choices=['original', 'bipolar', 'stft'])
+parser.add_argument('--patient_number', type=int)
 
 args = parser.parse_args()
 
