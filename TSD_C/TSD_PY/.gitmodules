@@ -1,0 +1,11 @@
+[submodule "Prototypical-Networks-for-Few-shot-Learning-PyTorch"]
+	path = Prototypical-Networks-for-Few-shot-Learning-PyTorch
+	url = git@github.com:orobix/Prototypical-Networks-for-Few-shot-Learning-PyTorch.git
+
+[submodule "sz-validation-framework"]
+       path = sz-validation-framework
+       url = git@github.com:esl-epfl/sz-validation-framework.git
+
+[submodule "epilepsy_performance_metrics"]
+       path = epilepsy_performance_metrics
+       url = git@github.com:alirezaamir/epilepsy_performance_metrics.git
