@@ -59,8 +59,8 @@ model = ViT(image_size=(3200, 15), patch_size=(64, 5), num_classes=1, dim=16, de
 sigmoid = nn.Sigmoid()
 
 # Training settings
-batch_size = 257
-epochs = 40
+batch_size = 256
+epochs = 60
 lr = 3e-5
 gamma = 0.7
 tuh_dataset.args.eeg_type = 'stft'
@@ -71,12 +71,11 @@ criterion = nn.BCELoss()
 optimizer = optim.Adam(model.parameters(), lr=lr)
 # scheduler
 scheduler = StepLR(optimizer, step_size=1, gamma=gamma)
-print('patient', tuh_dataset.args.patient_number)
 train_loader, val_loader, test_loader = tuh_dataset.get_data_loader(batch_size,
                                                                     save_dir=tuh_dataset.args.save_directory)
 
 best_val_auc = 0.0
-model_directory = os.path.join(tuh_dataset.args.save_directory, 'Siena_model{}'.format(tuh_dataset.args.patient_number))
+model_directory = os.path.join(tuh_dataset.args.save_directory, 'out_model')
 os.mkdir(model_directory)
 for epoch in range(epochs):
 
