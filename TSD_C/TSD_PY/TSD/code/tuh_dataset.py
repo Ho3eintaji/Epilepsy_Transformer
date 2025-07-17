@@ -28,6 +28,21 @@ parser.add_argument('--task_type', type=str, default='binary', choices=['binary'
 parser.add_argument('--slice_length', type=int, default=12)
 parser.add_argument('--eeg_type', type=str, default='stft', choices=['original', 'bipolar', 'stft'])
 
+# New args for approximations
+# Names:    smtaylor: Softmax with taylor approximation (default 3 terms)
+#           gelupw: piecewise GeLU
+#           consmax: constant softmax
+parser.add_argument('--train_approx', type=str, default='none', choices=['smtaylor', 'gelupw', 'consmax', "smtaylor_gelupw", "consmax_gelupw"])
+parser.add_argument('--output_name', type=str, default='out_model')
+
+# For data processing
+parser.add_argument('--fft_amplitude', type=str, default = 'logarithm', choices = ['logarithm', 'absolute'])
+
+# For inference
+parser.add_argument('--model_folder', type=str)
+parser.add_argument('--timing', type=bool, default=False)
+
+
 args = parser.parse_args()
 
 GLOBAL_INFO = {}
@@ -122,7 +137,11 @@ def spectrogram_unfold_feature(signals):
 
     spec = spec[:, :spec.shape[1] - 1, :]
     spec = np.reshape(spec, (-1, spec.shape[2]))
-    amp = (np.log(np.abs(spec) + 1e-10)).astype(np.float32)
+
+    if (args.fft_amplitude == 'logarithm'):
+        amp = (np.log(np.abs(spec) + 1e-10)).astype(np.float32)
+    else:
+        amp = np.abs(spec).astype(np.float32)
 
     return freqs, times, amp
 
@@ -423,7 +442,11 @@ def generate_STFT(pickle_file):
                                   boundary=None, padded=False)
 
         spec = spec[:, :cutoff_freq*freq_resolution, :]
-        amp = (np.log(np.abs(spec) + 1e-10)).astype(np.float32)
+
+        if (args.fft_amplitude == 'logarithm'):
+            amp = (np.log(np.abs(spec) + 1e-10)).astype(np.float32)
+        else:
+            amp = np.abs(spec).astype(np.float32)
 
         label = data_pkl['label']
         with open("{}/{}.pkl".format(save_directory, pickle_file.split('/')[-1].split('.')[0]), 'wb') as out_f:

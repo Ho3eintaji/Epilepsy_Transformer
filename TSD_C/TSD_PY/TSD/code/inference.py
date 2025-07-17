@@ -1,7 +1,7 @@
-import os
-
+import sys, os
+import argparse
 import math
-
+import smapprox
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 from sklearn import metrics
 import random
@@ -25,8 +25,23 @@ import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 from sklearn.metrics import precision_recall_curve, confusion_matrix
 
+
 from tuh_dataset import channels_groups, bipolar_signals_func
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--data_directory', type=str)
+parser.add_argument('--model_folder', type=str)
+parser.add_argument('--timing', type=bool, default=False)
+
+args = parser.parse_args()
+data_directory = args.data_directory
+model_folder = args.model_folder
+timing = args.timing
+
+if data_directory[-1] != '/':
+    data_directory += '/'
+if model_folder[-1] != '/':
+    model_folder += '/'
 
 def seed_everything(seed=99):
     random.seed(seed)
@@ -70,7 +85,7 @@ class Attention(nn.Module):
         self.heads = heads
         self.scale = dim_head ** -0.5
 
-        self.attend = nn.Softmax(dim=-1)
+        self.attend = smapprox.SoftmaxTaylor(dim = -1)
         self.dropout = nn.Dropout(dropout)
 
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias=False)
@@ -222,7 +237,10 @@ def thresh_max_f1(y_true, y_prob):
 
 
 def test_event_base(pat_num):
-    save_directory = '/home/amirshah/EPFL/EpilepsyTransformer/input/Siena_{}'.format(pat_num)
+    if (timing):
+        blockPrint()
+
+    save_directory = data_directory.format(pat_num)
     train_loader, val_loader, test_loader = get_data_loader(1, save_directory, event_base=True)
 
     val_label_all = np.zeros(0, dtype=np.int)
@@ -292,9 +310,18 @@ def test_event_base(pat_num):
     fp_rate = fp_total / (total_samples / scores.fs / 3600 / 24)  # FP per day
     print("False Alarm Rate : ", fp_rate)
 
+    if (timing):
+        enablePrint()
+
+
+
 
 def test_sample_base(pat_num):
-    save_directory = '/home/amirshah/EPFL/EpilepsyTransformer/input/Siena_{}'.format(pat_num)
+
+    if (timing):
+        blockPrint()        
+
+    save_directory = data_directory.format(pat_num)
     train_loader, val_loader, test_loader = get_data_loader(257, save_directory, event_base=False)
 
     val_label_all = []
@@ -333,9 +360,14 @@ def test_sample_base(pat_num):
     print("F1", scores.f1)
     print("FAR", scores.fpRate)
 
-    print("Test confusion matrix: ", confusion_matrix(test_label_all, test_predict))
+    mat = confusion_matrix(test_label_all, test_predict)
+    print("Test confusion matrix: ", mat)
 
     print("AUROC result: ", roc_auc_score(test_label_all, test_prob_all))
+
+    if (timing):
+        enablePrint()   
+
 
 
 def get_data_loader_multi(save_directory, batch_size=1):
@@ -419,7 +451,8 @@ def test_run():
             transforms.ToTensor(),
         ]
     )
-    path = '/home/amirshah/EPFL/EpilepsyTransformer/TUSZv2/preprocess/task-binary_datatype-eval'
+
+    path = data_directory +'task-binary_datatype-eval'
     test_data = TUHDataset(['{}/{}'.format(path, item) for item in os.listdir(path) if item.endswith('.pkl')], transform=test_transforms)
     test_loader = DataLoader(dataset=test_data, batch_size=math.ceil(len(test_data) / 50), shuffle=False)
     with torch.no_grad():
@@ -428,21 +461,77 @@ def test_run():
             test_prob = torch.squeeze(sigmoid(test_prob))
             # print(test_prob.cpu().numpy())
 
+# Disable printing
+def blockPrint():
+    sys.stdout = open(os.devnull, 'w')
+
+# Restore printing
+def enablePrint():
+    sys.stdout = sys.__stdout__
+
+
+
 
 sample_rate = 256
 eeg_type = 'stft'  # 'original', 'bipolar', 'stft'
 device = 'cuda:0'
 
 # model = torch.load('inference_ck_0.9208', map_location=torch.device(device))
-model = torch.load('/home/amirshah/EPFL/EpilepsyTransformer/TUSZv2/preprocess/TUH_model/test_model_22_0.9296276365344943',
-                   map_location=torch.device(device))
+
+
+model_file = max(os.listdir(path=data_directory+model_folder))
+
+model = torch.load(data_directory+model_folder+model_file, map_location=torch.device(device))
 print(sum(p.numel() for p in model.parameters() if p.requires_grad))
+
+
 model.eval()
 sigmoid = nn.Sigmoid()
-# for i in [0, 1, 3, 5, 6, 7, 9, 10, 12, 17]:
-for i in [17]:
-    print("Patient ", i)
+if (timing):
+
+    total = 0
+    for i in range(0,10):
+        print("Testing inference ", i+1)
+        start = time.time()
+        test_sample_base(pat_num=i)
+        end = time.time()
+        total += (end-start)
+  
+    print("Average time for sample based: ", total/10, "s")
+    
+    total = 0
+    for i in range(0,10):
+        print("Testing inference ", i+1)
+        start = time.time()
+        test_event_base(pat_num=i)
+        end = time.time()
+        total += (end-start)
+    print("Average time for event based: ", total/10, "s")
+
+else:
+
+    i = 17
+    print("Sample based testing\n")
     test_sample_base(pat_num=i)
+
+    print("Event based testing\n")
     test_event_base(pat_num=i)
+     
+    
+
+
+# old inference code
+# for i in [17]:
+#       print("Patient ", i)
+#        start = time.time()
+#        test_sample_base(pat_num=i)
+#        end = time.time()
+#        print("Time for sample based: ", end-start, "s")
+#        
+#        start = time.time()
+#        test_event_base(pat_num=i)
+#        end = time.time()
+#        print("Time for event based: ", end-start, "s") 
+###
 # test_recall()
 # test_run()

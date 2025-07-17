@@ -10,6 +10,20 @@ bioRxiv 2023.01.24.525308; doi: https://doi.org/10.1101/2023.01.24.525308
 
 The model is trained using the TUSZ V2.0.0 dataset. You need to download this dataset before running the code.
 
+## Environment creation
+
+Using conda, with channels pytorch, default and conda-forge, run 
+
+    
+    conda create --name test --file requirement.txt
+    
+
+Then, install the python requirements:
+
+    
+    pip install -r pyrequirements.txt
+    
+
 ## Preprocessing
 
 To preprocess the TUSZ v2.0.0 dataset:
@@ -18,8 +32,9 @@ To preprocess the TUSZ v2.0.0 dataset:
 2. Run the following command:
 
     ```bash
-    python tuh_dataset.py --data_directory /path/to/the/TUSZV2/dataset --save_directory /path/to/save/the/preprocessed/signals
+    python tuh_dataset.py --data_directory /path/to/the/TUSZV2/dataset --save_directory /path/to/save/the/preprocessed/signals --data_type XXX --fft_amplitude YYY 
     ```
+Where XXX = (train, dev, eval) and YYY = (logarithm, absolute)
 
 This script applies filtering to the input signals, converts them to bipolar montage, and extracts STFT files. Note that this process may take some time.
 
@@ -31,10 +46,23 @@ To train the Transformer model:
 2. Run the following command:
 
     ```bash
-    python best_model.py --data_directory /path/to/the/TUSZV2/dataset --save_directory /path/to/save/the/preprocessed/signals
+    python best_model.py --data_directory /path/to/the/TUSZV2/dataset --save_directory /path/to/save/the/preprocessed/signals --output_name XXX --train_approx YYY
     ```
 
-The trained model will be saved in a directory called `out_model` inside the `save_directory`.
+Select the approximation type by replacing YYY with (smtaylor, gelupw, consmax, smtaylor_gelupw, consmax_gelupw). If you wan no approximation, dont put anything.
+
+The trained model will be saved in a directory called `XXX` inside the `save_directory`.
+
+
+## Inference
+
+Command to run the inference:
+
+    
+    python inference.py --data_directory /path/to/save/the/preprocessed/signals --model_folder output_name_from_training --timing True/False
+    
+
+The model folder is simply the name you gave your output for training.
 
 ## Notes
 

@@ -12,7 +12,24 @@ from torch.optim.lr_scheduler import StepLR
 from tqdm import tqdm
 
 import tuh_dataset
-from vit_pytorch.vit import ViT
+
+train_approx = tuh_dataset.args.train_approx
+
+if      train_approx == "smtaylor":
+    from vit_pytorch.vit_smapprox import ViT
+    print("hello")
+elif train_approx == "gelupw":
+    from vit_pytorch.vit_gelupw import ViT
+elif train_approx == "consmax":
+    from vit_pytorch.vit_conSmax import ViT
+elif train_approx == "smtaylor_gelupw":
+    from vit_pytorch.vit_smapprox_gelupw import ViT
+elif train_approx == "consmax_gelupw":
+    from vit_pytorch.vit_conSmax_gelupw import ViT
+else:
+    from vit_pytorch.vit import ViT
+
+
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
@@ -75,7 +92,7 @@ train_loader, val_loader, test_loader = tuh_dataset.get_data_loader(batch_size,
                                                                     save_dir=tuh_dataset.args.save_directory)
 
 best_val_auc = 0.0
-model_directory = os.path.join(tuh_dataset.args.save_directory, 'out_model')
+model_directory = os.path.join(tuh_dataset.args.save_directory, tuh_dataset.args.output_name)
 os.mkdir(model_directory)
 for epoch in range(epochs):
 
